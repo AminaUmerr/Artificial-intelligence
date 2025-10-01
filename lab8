@@ -1,0 +1,222 @@
+# Task 1
+# Implement greedy best first search in Python.
+from heapq import heappush, heappop
+
+class Graph:
+    def __init__(self):
+        self.graph = {}
+
+    def add_edge(self, u, v):
+        if u not in self.graph:
+            self.graph[u] = []
+        if v not in self.graph:
+            self.graph[v] = []
+        if v not in self.graph[u]:
+            self.graph[u].append(v)
+        if u not in self.graph[v]:
+            self.graph[v].append(u)
+
+    def greedy_search(self, start, target, heuristic):
+        visited = set()
+        pq = []  # empty priority queue (actually a list)
+        heappush(pq, (heuristic[start], start))  # Add (priority, node) to pq
+        visited.add(start)
+
+        while pq:
+            _, current = heappop(pq)  # pops the smallest priority (heuristic)
+            if current == target:
+                print(f"\nNode {target} found using Greedy Search!")
+                return True
+
+            for neighbor in self.graph[current]:
+                if neighbor not in visited:
+                    heappush(pq, (heuristic[neighbor], neighbor))
+                    visited.add(neighbor)
+
+        print(f"Node {target} not found.")
+        return False
+
+
+# Example Graph
+g = Graph()
+g.add_edge("A", "B")
+g.add_edge("A", "C")
+g.add_edge("B", "D")
+g.add_edge("B", "E")
+g.add_edge("C", "F")
+g.add_edge("E", "G")
+
+# Example heuristic (smaller means closer to goal 'G')
+heuristic = {
+    'A': 5,
+    'B': 4,
+    'C': 3,
+    'D': 10,
+    'E': 1,
+    'F': 2,
+    'G': 0
+}
+
+g.greedy_search('A', 'G', heuristic)
+
+
+#Task 2
+#Implement the A* search in python.
+from heapq import heappush, heappop
+from collections import defaultdict
+
+class Graph:
+    def __init__(self):
+        self.graph = {}
+
+    def add_edge(self, u, v, cost=1):
+        if u not in self.graph:
+            self.graph[u] = []
+        if v not in self.graph:
+            self.graph[v] = []
+        self.graph[u].append((v, cost))
+        self.graph[v].append((u, cost))
+
+    def a_star_search(self, start, target, heuristic):
+        open_set = []  # priority queue (stores nodes that need to be explored)
+        heappush(open_set, (heuristic[start], 0, start))  # (f, g, node)
+
+        g_costs = defaultdict(lambda: float("inf"))  # stores best cost so far
+        g_costs[start] = 0
+
+        closed_set = set()  # explored nodes
+
+        while open_set:
+            f, g, current = heappop(open_set)
+
+            if current == target:
+                print(f"\nNode {target} found with cost {g} using A* Search!")
+                return True
+
+            if current in closed_set:
+                continue
+
+            closed_set.add(current)
+
+            for neighbor, cost in self.graph[current]:
+                g_new = g + cost
+                if g_new < g_costs[neighbor]:  # only push better paths
+                    g_costs[neighbor] = g_new
+                    f_new = g_new + heuristic[neighbor]
+                    heappush(open_set, (f_new, g_new, neighbor))
+
+        print(f"Node {target} not found.")
+        return False
+
+
+# Example usage
+g = Graph()
+# add edges with costs
+g.add_edge("A", "B", 1)
+g.add_edge("A", "C", 3)
+g.add_edge("B", "D", 1)
+g.add_edge("B", "E", 3)
+g.add_edge("C", "F", 1)
+g.add_edge("E", "G", 1)
+
+# heuristic: estimated cost to reach "G"
+heuristic = {
+    "A": 5,
+    "B": 4,
+    "C": 3,
+    "D": 10,
+    "E": 1,
+    "F": 2,
+    "G": 0
+}
+
+g.a_star_search("A", "G", heuristic)
+
+
+
+# Task 3
+# Implement the 8 Puzzle Problem using A* search in python.
+import heapq
+class PuzzleState:
+    def __init__(self, board, parent=None, move="", depth=0):
+        self.board = board
+        self.parent = parent
+        self.move = move
+        self.depth = depth
+        self.f = 0
+
+    def __lt__(self, other):
+        return self.f < other.f
+
+    def find_zero(self):
+        for i in range(3):
+            for j in range(3):
+                if self.board[i][j] == 0:
+                    return i, j
+
+    def generate_children(self):
+        children = []
+        x, y = self.find_zero()
+        moves = {"Up": (x - 1, y), "Down": (x + 1, y),
+                 "Left": (x, y - 1), "Right": (x, y + 1)}
+
+        for move, (nx, ny) in moves.items():
+            if 0 <= nx < 3 and 0 <= ny < 3:
+                new_board = [row[:] for row in self.board]  # deep copy
+                new_board[x][y], new_board[nx][ny] = new_board[nx][ny], new_board[x][y]
+                children.append(PuzzleState(new_board, self, move, self.depth + 1))
+        return children
+
+def heuristic(board, goal):
+    """Heuristic: number of misplaced tiles."""
+    misplaced = 0
+    for i in range(3):
+        for j in range(3):
+            if board[i][j] != 0 and board[i][j] != goal[i][j]:
+                misplaced += 1
+    return misplaced
+
+def a_star_search(start, goal):
+    open_list = []
+    closed_set = set()
+
+    start_state = PuzzleState(start)
+    start_state.f = heuristic(start, goal)
+    heapq.heappush(open_list, start_state)
+
+    while open_list:
+        current = heapq.heappop(open_list)
+
+        if current.board == goal:
+            path = []
+            while current.parent:
+                path.append(current.move)
+                current = current.parent
+            return path[::-1]  # reverse moves to get correct order
+
+        closed_set.add(tuple(map(tuple, current.board)))
+
+        for child in current.generate_children():
+            if tuple(map(tuple, child.board)) in closed_set:
+                continue
+            child.f = child.depth + heuristic(child.board, goal)
+            heapq.heappush(open_list, child)
+
+    return None
+
+# Example usage
+start_board = [[1, 2, 3],
+               [4, 0, 6],
+               [7, 5, 8]]
+
+goal_board = [[1, 2, 3],
+              [4, 5, 6],
+              [7, 8, 0]]
+
+solution = a_star_search(start_board, goal_board)
+
+if solution:
+    print("Solution found in", len(solution), "moves.")
+    print("Moves:", solution)
+else:
+    print("No solution exists.")
